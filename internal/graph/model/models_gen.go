@@ -21,6 +21,7 @@ type Post struct {
 	Author          string     `json:"author"`
 	CommentsAllowed bool       `json:"commentsAllowed"`
 	Comments        []*Comment `json:"comments,omitempty"`
+	CreatedAt       string     `json:"createdAt"`
 }
 
 type Query struct {

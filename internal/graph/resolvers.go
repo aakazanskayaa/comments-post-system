@@ -6,14 +6,13 @@ import (
 	"context"
 	"time"
 
-	model1 "github.com/aakazanskayaa/comments-post-system/internal/graph/model"
-	"github.com/aakazanskayaa/comments-post-system/internal/model"
+	"github.com/aakazanskayaa/comments-post-system/internal/graph/model"
 )
 
 type Resolver struct{}
 
 // Mutation: CreatePost - создаёт новый пост
-func (r *mutationResolver) CreatePost(ctx context.Context, title string, content string, author string, commentsAllowed bool) (*model1.Post, error) {
+func (r *mutationResolver) CreatePost(ctx context.Context, title string, content string, author string, commentsAllowed bool) (*model.Post, error) {
 	newPost := &model.Post{
 		ID:              "2", // В реальной системе это должно быть сгенерировано, например, в базе данных
 		Title:           title,
@@ -26,7 +25,7 @@ func (r *mutationResolver) CreatePost(ctx context.Context, title string, content
 }
 
 // Mutation: AddComment - добавляет новый комментарий
-func (r *mutationResolver) AddComment(ctx context.Context, postID string, parentID *string, author string, content string) (*model1.Comment, error) {
+func (r *mutationResolver) AddComment(ctx context.Context, postID string, parentID *string, author string, content string) (*model.Comment, error) {
 	newComment := &model.Comment{
 		ID:        "1", // В реальной системе это должно быть сгенерировано
 		PostID:    postID,
@@ -39,7 +38,7 @@ func (r *mutationResolver) AddComment(ctx context.Context, postID string, parent
 }
 
 // Query: Posts - возвращает список постов
-func (r *queryResolver) Posts(ctx context.Context) ([]*model1.Post, error) {
+func (r *queryResolver) Posts(ctx context.Context) ([]*model.Post, error) {
 	return []*model.Post{
 		{
 			ID:              "1",
@@ -53,7 +52,7 @@ func (r *queryResolver) Posts(ctx context.Context) ([]*model1.Post, error) {
 }
 
 // Query: Post - возвращает пост по ID
-func (r *queryResolver) Post(ctx context.Context, id string) (*model1.Post, error) {
+func (r *queryResolver) Post(ctx context.Context, id string) (*model.Post, error) {
 	return &model.Post{
 		ID:              id,
 		Title:           "Example Post",
@@ -65,7 +64,7 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*model1.Post, erro
 }
 
 // Subscription: CommentAdded - подписка на добавление комментария
-func (r *subscriptionResolver) CommentAdded(ctx context.Context, postID string) (<-chan *model1.Comment, error) {
+func (r *subscriptionResolver) CommentAdded(ctx context.Context, postID string) (<-chan *model.Comment, error) {
 	commentChannel := make(chan *model.Comment)
 
 	// Пример: отправка тестового комментария через канал

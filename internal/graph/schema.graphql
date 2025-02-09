@@ -5,6 +5,7 @@ type Post {
     author: String!
     commentsAllowed: Boolean!
     comments: [Comment!]
+    createdAt: String!
 }
 
 type Comment {
