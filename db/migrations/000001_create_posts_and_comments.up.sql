@@ -1,0 +1,17 @@
+CREATE TABLE posts (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    author TEXT NOT NULL,
+    comments_allowed BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE comments (
+    id SERIAL PRIMARY KEY,
+    post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+    parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
+    author TEXT NOT NULL,
+    content TEXT NOT NULL CHECK (LENGTH(content) <= 2000),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
