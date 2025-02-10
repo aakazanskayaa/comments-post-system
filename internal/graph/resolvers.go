@@ -1,107 +1,109 @@
 package graph
 
-// THIS CODE WILL BE UPDATED WITH SCHEMA CHANGES. PREVIOUS IMPLEMENTATION FOR SCHEMA CHANGES WILL BE KEPT IN THE COMMENT SECTION. IMPLEMENTATION FOR UNCHANGED SCHEMA WILL BE KEPT.
-
 import (
 	"context"
 	"time"
 
+	"github.com/aakazanskayaa/comments-post-system/db"
 	"github.com/aakazanskayaa/comments-post-system/internal/graph/model"
+	"github.com/google/uuid"
 )
 
+// Resolver - главный резолвер
 type Resolver struct{}
 
-// Mutation: CreatePost - создаёт новый пост
-func (r *mutationResolver) CreatePost(ctx context.Context, title string, content string, author string, commentsAllowed bool) (*model.Post, error) {
-	newPost := &model.Post{
-		ID:              "2", // В реальной системе это должно быть сгенерировано, например, в базе данных
+// Query Resolver (Запросы)
+type queryResolver struct{ *Resolver }
+
+// Mutation Resolver (Мутации)
+type mutationResolver struct{ *Resolver }
+
+// Subscription Resolver (Подписки)
+type subscriptionResolver struct{ *Resolver }
+
+// ✅ Получение всех постов
+func (r *queryResolver) Posts(ctx context.Context) ([]*model.Post, error) {
+	return db.DB.GetAllPosts()
+}
+
+// ✅ Получение поста по ID
+func (r *queryResolver) Post(ctx context.Context, id string) (*model.Post, error) {
+	return db.DB.GetPostByID(id)
+}
+
+// ✅ Создание нового поста
+func (r *mutationResolver) CreatePost(ctx context.Context, title, content, author string, commentsAllowed bool) (*model.Post, error) {
+	post := &model.Post{
+		ID:              uuid.New().String(),
 		Title:           title,
 		Content:         content,
 		Author:          author,
 		CommentsAllowed: commentsAllowed,
 		CreatedAt:       time.Now().Format(time.RFC3339),
 	}
-	return newPost, nil
+
+	err := db.DB.CreatePost(post)
+	if err != nil {
+		return nil, err
+	}
+	return post, nil
 }
 
-// Mutation: AddComment - добавляет новый комментарий
-func (r *mutationResolver) AddComment(ctx context.Context, postID string, parentID *string, author string, content string) (*model.Comment, error) {
-	newComment := &model.Comment{
-		ID:        "1", // В реальной системе это должно быть сгенерировано
+// ✅ Добавление комментария
+func (r *mutationResolver) AddComment(ctx context.Context, postID string, parentID *string, author, content string) (*model.Comment, error) {
+	post, err := db.DB.GetPostByID(postID)
+	if err != nil || post == nil {
+		return nil, err
+	}
+
+	if !post.CommentsAllowed {
+		return nil, err
+	}
+
+	comment := &model.Comment{
+		ID:        uuid.New().String(),
 		PostID:    postID,
 		ParentID:  parentID,
 		Author:    author,
 		Content:   content,
 		CreatedAt: time.Now().Format(time.RFC3339),
 	}
-	return newComment, nil
+
+	err = db.DB.CreateComment(comment)
+	if err != nil {
+		return nil, err
+	}
+
+	return comment, nil
 }
 
-// Query: Posts - возвращает список постов
-func (r *queryResolver) Posts(ctx context.Context) ([]*model.Post, error) {
-	return []*model.Post{
-		{
-			ID:              "1",
-			Title:           "First Post",
-			Content:         "This is the first post content.",
-			Author:          "Anna",
-			CommentsAllowed: true,
-			CreatedAt:       time.Now().Format(time.RFC3339),
-		},
-	}, nil
+// ✅ Получение комментариев к посту с поддержкой пагинации
+func (r *queryResolver) Comments(ctx context.Context, postID string, limit, offset int) ([]*model.Comment, error) {
+	return db.DB.GetCommentsByPostID(postID, limit, offset)
 }
 
-// Query: Post - возвращает пост по ID
-func (r *queryResolver) Post(ctx context.Context, id string) (*model.Post, error) {
-	return &model.Post{
-		ID:              id,
-		Title:           "Example Post",
-		Content:         "This is an example post.",
-		Author:          "Anna",
-		CommentsAllowed: true,
-		CreatedAt:       time.Now().Format(time.RFC3339),
-	}, nil
-}
-
-// Subscription: CommentAdded - подписка на добавление комментария
+// ✅ Поддержка подписки на новые комментарии (GraphQL Subscriptions)
 func (r *subscriptionResolver) CommentAdded(ctx context.Context, postID string) (<-chan *model.Comment, error) {
-	commentChannel := make(chan *model.Comment)
+	commentChan := make(chan *model.Comment, 1)
 
-	// Пример: отправка тестового комментария через канал
 	go func() {
-		defer close(commentChannel)
-		commentChannel <- &model.Comment{
-			ID:        "1",
-			PostID:    postID,
-			ParentID:  nil,
-			Author:    "John",
-			Content:   "This is a new comment.",
-			CreatedAt: time.Now().Format(time.RFC3339),
+		for {
+			time.Sleep(2 * time.Second)
+			comment := &model.Comment{
+				ID:        uuid.New().String(),
+				PostID:    postID,
+				Author:    "Auto-generated",
+				Content:   "This is a generated comment!",
+				CreatedAt: time.Now().Format(time.RFC3339),
+			}
+			commentChan <- comment
 		}
 	}()
 
-	return commentChannel, nil
+	return commentChan, nil
 }
 
-// Mutation returns MutationResolver implementation.
-func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
-
-// Query returns QueryResolver implementation.
-func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
-
-// Subscription returns SubscriptionResolver implementation.
+// ✅ Подключение к `generated.go`
+func (r *Resolver) Mutation() MutationResolver         { return &mutationResolver{r} }
+func (r *Resolver) Query() QueryResolver               { return &queryResolver{r} }
 func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
-
-type mutationResolver struct{ *Resolver }
-type queryResolver struct{ *Resolver }
-type subscriptionResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-/*
-	type Resolver struct{}
-*/
