@@ -37,6 +37,6 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("🚀 Server running on http://localhost:%s/\n", port)
+	log.Printf("Server running on http://localhost:%s/\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

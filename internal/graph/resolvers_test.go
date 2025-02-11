@@ -2,10 +2,11 @@ package graph_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
-	//"time"
+	"time"
 
 	"github.com/aakazanskayaa/comments-post-system/db"
 	"github.com/aakazanskayaa/comments-post-system/internal/graph"
@@ -16,7 +17,7 @@ import (
 )
 
 func setupTestDB() {
-	db.DB = db.NewMemoryStorage() // или db.NewPostgresStorage(dsn), если тестируешь с PostgreSQL
+	db.DB = db.NewMemoryStorage()
 }
 
 func TestMain(m *testing.M) {
@@ -76,12 +77,12 @@ func TestGetPostWithComments(t *testing.T) {
 	assert.NoError(t, err, "Ошибка при создании поста")
 	assert.NotNil(t, newPost, "Созданный пост не должен быть nil")
 
-	// Добавляем комментарий к этому посту
+	// Добавляем коммент к этому посту
 	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Comment Author", "Test Comment")
 	assert.NoError(t, err, "Ошибка при добавлении комментария")
 	assert.NotNil(t, newComment, "Созданный комментарий не должен быть nil")
 
-	// Получаем комментарии к этому посту
+	// Получаем комменты к этому посту
 	comments, err := resolver.Query().Comments(ctx, newPost.ID, 10, 0)
 	assert.NoError(t, err, "Ошибка при получении комментариев")
 	assert.NotNil(t, comments, "Список комментариев не должен быть nil")
@@ -112,45 +113,154 @@ func TestAddCommentToPostWithDisabledComments(t *testing.T) {
 	assert.NoError(t, err, "Ошибка при создании поста")
 	assert.NotNil(t, newPost, "Созданный пост не должен быть nil")
 
-	// Пытаемся добавить комментарий и ожидаем ошибку
+	// Пытаемся добавить коммента (должна быть ошибка)
 	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Comment Author", "Test Comment")
 	assert.Error(t, err, "Ожидалась ошибка при попытке добавить комментарий к посту с отключенными комментариями")
 	assert.Nil(t, newComment, "Комментарий не должен быть создан")
 	assert.Equal(t, "комментарии к этому посту запрещены", err.Error(), "Текст ошибки должен совпадать")
 }
 
-/* func TestFullProcess(t *testing.T) {
+func TestFullProcess(t *testing.T) {
 	db.DB = db.NewMemoryStorage() // Инициализируем хранилище
 
 	resolver := &graph.Resolver{}
 	ctx := context.Background()
 
-	// 1️⃣ Создаем пост
+	// Создаем пост
 	newPost, err := resolver.Mutation().CreatePost(ctx, "Integration Test Post", "Test Content", "Test Author", true)
 	assert.NoError(t, err, "Ошибка при создании поста")
 	assert.NotNil(t, newPost, "Созданный пост не должен быть nil")
 
-	// 2️⃣ Добавляем комментарий к посту
+	// Добавляем комментарий к посту
 	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Test Commenter", "This is a test comment.")
 	assert.NoError(t, err, "Ошибка при добавлении комментария")
 	assert.NotNil(t, newComment, "Созданный комментарий не должен быть nil")
 
-	// 3️⃣ Ждем 100 мс (чтобы эмулировать задержку обработки в памяти)
+	// Ждем 100 мс (чтобы эмулировать задержку обработки в памяти)
 	time.Sleep(100 * time.Millisecond)
 
-	// 4️⃣ Получаем пост с комментариями
+	// Получаем пост с комментариями
 	retrievedPost, err := resolver.Query().Post(ctx, newPost.ID)
 	assert.NoError(t, err, "Ошибка при получении поста")
 	assert.NotNil(t, retrievedPost, "Полученный пост не должен быть nil")
 	assert.Equal(t, newPost.ID, retrievedPost.ID, "ID поста должен совпадать")
 
-	// ✅ Логируем результат для отладки
+	// Логируем результат для отладки
 	t.Logf("Полученные комментарии: %+v", retrievedPost.Comments)
 
-	// 5️⃣ Проверяем, что комментарий сохранился
+	// Проверяем что комментарий сохранился
 	if assert.NotNil(t, retrievedPost.Comments, "Список комментариев не должен быть nil") {
 		assert.Equal(t, 1, len(retrievedPost.Comments), "Должен быть 1 комментарий")
 		assert.Equal(t, newComment.ID, retrievedPost.Comments[0].ID, "ID комментария должен совпадать")
 		assert.Equal(t, "This is a test comment.", retrievedPost.Comments[0].Content, "Текст комментария должен совпадать")
 	}
-} */
+}
+func TestPaginationComments(t *testing.T) {
+	db.DB = db.NewMemoryStorage() // Инициализируем in-memory хранилище
+
+	resolver := &graph.Resolver{}
+	ctx := context.Background()
+
+	// Создаем пост
+	newPost, err := resolver.Mutation().CreatePost(ctx, "Pagination Test Post", "Test Content", "Test Author", true)
+	assert.NoError(t, err, "Ошибка при создании поста")
+	assert.NotNil(t, newPost, "Созданный пост не должен быть nil")
+
+	// Добавляем 5 комментов
+	for i := 1; i <= 5; i++ {
+		_, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, fmt.Sprintf("Author %d", i), fmt.Sprintf("Comment %d", i))
+		assert.NoError(t, err, "Ошибка при добавлении комментария")
+	}
+
+	// Ждем чтобы эмулировать задержку сохранения данных
+	time.Sleep(100 * time.Millisecond)
+
+	// Получаем первую страницу (2 коммента)
+	firstPage, err := resolver.Query().Comments(ctx, newPost.ID, 2, 0)
+	assert.NoError(t, err, "Ошибка при получении первой страницы комментариев")
+	assert.Equal(t, 2, len(firstPage), "На первой странице должно быть 2 комментария")
+
+	// Получаем вторую страницу (следующие 2 коммента)
+	secondPage, err := resolver.Query().Comments(ctx, newPost.ID, 2, 2)
+	assert.NoError(t, err, "Ошибка при получении второй страницы комментариев")
+	assert.Equal(t, 2, len(secondPage), "На второй странице должно быть 2 комментария")
+
+	// Проверка на то, что данные не совпадают
+	assert.NotEqual(t, firstPage[0].ID, secondPage[0].ID, "Первая и вторая страницы не должны содержать одинаковые комментарии")
+	assert.NotEqual(t, firstPage[1].ID, secondPage[1].ID, "Первая и вторая страницы не должны содержать одинаковые комментарии")
+
+	// Получаем третью страницу (оставшийся 1 коммент)
+	thirdPage, err := resolver.Query().Comments(ctx, newPost.ID, 2, 4)
+	assert.NoError(t, err, "Ошибка при получении третьей страницы комментариев")
+	assert.Equal(t, 1, len(thirdPage), "На третьей странице должен быть 1 комментарий")
+
+	// Убеждаемся, что это последний комментарий
+	assert.NotEqual(t, thirdPage[0].ID, firstPage[0].ID, "Третий комментарий должен быть уникальным")
+	assert.NotEqual(t, thirdPage[0].ID, secondPage[0].ID, "Третий комментарий должен быть уникальным")
+
+	// Получаем страницу за пределами доступных комментариев (должно быть пусто)
+	emptyPage, err := resolver.Query().Comments(ctx, newPost.ID, 2, 6)
+	assert.NoError(t, err, "Ошибка при получении пустой страницы")
+	assert.Equal(t, 0, len(emptyPage), "Пустая страница должна возвращать 0 комментариев")
+}
+func TestNestedComments(t *testing.T) {
+	db.DB = db.NewMemoryStorage() // Используем in-memory хранилище
+
+	resolver := &graph.Resolver{}
+	ctx := context.Background()
+
+	// Создаем пост
+	post, err := resolver.Mutation().CreatePost(ctx, "Test Post", "Content", "Author", true)
+	assert.NoError(t, err)
+	assert.NotNil(t, post)
+
+	// Добавляем корневой комментарий
+	rootComment, err := resolver.Mutation().AddComment(ctx, post.ID, nil, "User1", "Root Comment")
+	assert.NoError(t, err)
+	assert.NotNil(t, rootComment)
+
+	// Добавляем вложенный комментарий
+	childComment1, err := resolver.Mutation().AddComment(ctx, post.ID, &rootComment.ID, "User2", "Child Comment 1")
+	assert.NoError(t, err)
+	assert.NotNil(t, childComment1)
+
+	// Добавляем еще один уровень вложенности
+	childComment2, err := resolver.Mutation().AddComment(ctx, post.ID, &childComment1.ID, "User3", "Child Comment 2")
+	assert.NoError(t, err)
+	assert.NotNil(t, childComment2)
+
+	// Проверяем, что вложенные комментарии есть
+	comments, err := resolver.Query().Comments(ctx, post.ID, 10, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(comments), "Должно быть 3 комментария (включая вложенные)")
+}
+func TestCommentSubscription(t *testing.T) {
+	db.DB = db.NewMemoryStorage() // In-memory хранилище
+
+	resolver := &graph.Resolver{}
+	ctx := context.Background()
+
+	// Создаем пост
+	post, err := resolver.Mutation().CreatePost(ctx, "Subscription Test", "Content", "Author", true)
+	assert.NoError(t, err)
+	assert.NotNil(t, post)
+
+	// Подписываемся на комментарии
+	commentChan, err := resolver.Subscription().CommentAdded(ctx, post.ID)
+	assert.NoError(t, err)
+
+	// Добавляем комментарий
+	go func() {
+		time.Sleep(1 * time.Second) // Ждем 1 секунду, имитируем задержку
+		_, _ = resolver.Mutation().AddComment(ctx, post.ID, nil, "User", "New comment via subscription test")
+	}()
+
+	// Ждем комментарий из подписки
+	select {
+	case newComment := <-commentChan:
+		assert.NotNil(t, newComment, "Комментарий из подписки не должен быть nil")
+		assert.Equal(t, "New comment via subscription test", newComment.Content, "Содержимое комментария должно совпадать")
+	case <-time.After(3 * time.Second):
+		t.Fatal("Не получили комментарий через подписку")
+	}
+}

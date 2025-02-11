@@ -35,12 +35,16 @@ func (r *mutationResolver) CreatePost(ctx context.Context, title string, content
 // Добавление комментария
 func (r *mutationResolver) AddComment(ctx context.Context, postID string, parentID *string, author, content string) (*model.Comment, error) {
 	post, err := db.DB.GetPostByID(postID)
+
 	if err != nil || post == nil {
 		return nil, errors.New("пост не найден")
 	}
 
 	if !post.CommentsAllowed {
 		return nil, errors.New("комментарии к этому посту запрещены")
+	}
+	if len(content) > 2000 {
+		return nil, errors.New("Комментарий слишком длинный (максимум 2000 символов)")
 	}
 
 	comment := &model.Comment{
@@ -77,7 +81,7 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*model.Post, error
 	if err != nil {
 		return nil, err
 	}
-	post.Comments = comments // ✅ Добавляем комментарии к объекту поста
+	post.Comments = comments // Добавляем комментарии к объекту поста
 
 	return post, nil
 }
@@ -93,15 +97,12 @@ func (r *subscriptionResolver) CommentAdded(ctx context.Context, postID string) 
 
 	go func() {
 		for {
-			time.Sleep(2 * time.Second)
-			comment := &model.Comment{
-				ID:        uuid.New().String(),
-				PostID:    postID,
-				Author:    "Auto-generated",
-				Content:   "This is a generated comment!",
-				CreatedAt: time.Now().Format(time.RFC3339),
+			// Ожидаем новый комментарий в БД
+			time.Sleep(1 * time.Second)
+			comments, _ := db.DB.GetCommentsByPostID(postID, 1, 0) // Получаем последний комментарий
+			if len(comments) > 0 {
+				commentChan <- comments[0] // Отправляем реальный комментарий
 			}
-			commentChan <- comment
 		}
 	}()
 
