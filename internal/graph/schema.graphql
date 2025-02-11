@@ -4,8 +4,8 @@ type Post {
     content: String!
     author: String!
     commentsAllowed: Boolean!
-    comments: [Comment!]
     createdAt: String!
+    comments(limit: Int, offset: Int): [Comment!]
 }
 
 type Comment {
@@ -20,6 +20,7 @@ type Comment {
 type Query {
     posts: [Post!]!
     post(id: ID!): Post
+    comments(postID: ID!, limit: Int!, offset: Int!): [Comment!]
 }
 
 type Mutation {

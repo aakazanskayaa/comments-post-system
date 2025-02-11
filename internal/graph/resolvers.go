@@ -1,7 +1,10 @@
 package graph
 
+// THIS CODE WILL BE UPDATED WITH SCHEMA CHANGES. PREVIOUS IMPLEMENTATION FOR SCHEMA CHANGES WILL BE KEPT IN THE COMMENT SECTION. IMPLEMENTATION FOR UNCHANGED SCHEMA WILL BE KEPT.
+
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/aakazanskayaa/comments-post-system/db"
@@ -9,30 +12,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Resolver - главный резолвер
 type Resolver struct{}
 
-// Query Resolver (Запросы)
-type queryResolver struct{ *Resolver }
-
-// Mutation Resolver (Мутации)
-type mutationResolver struct{ *Resolver }
-
-// Subscription Resolver (Подписки)
-type subscriptionResolver struct{ *Resolver }
-
-// ✅ Получение всех постов
-func (r *queryResolver) Posts(ctx context.Context) ([]*model.Post, error) {
-	return db.DB.GetAllPosts()
-}
-
-// ✅ Получение поста по ID
-func (r *queryResolver) Post(ctx context.Context, id string) (*model.Post, error) {
-	return db.DB.GetPostByID(id)
-}
-
-// ✅ Создание нового поста
-func (r *mutationResolver) CreatePost(ctx context.Context, title, content, author string, commentsAllowed bool) (*model.Post, error) {
+// Создание нового поста
+func (r *mutationResolver) CreatePost(ctx context.Context, title string, content string, author string, commentsAllowed bool) (*model.Post, error) {
 	post := &model.Post{
 		ID:              uuid.New().String(),
 		Title:           title,
@@ -49,15 +32,15 @@ func (r *mutationResolver) CreatePost(ctx context.Context, title, content, autho
 	return post, nil
 }
 
-// ✅ Добавление комментария
+// Добавление комментария
 func (r *mutationResolver) AddComment(ctx context.Context, postID string, parentID *string, author, content string) (*model.Comment, error) {
 	post, err := db.DB.GetPostByID(postID)
 	if err != nil || post == nil {
-		return nil, err
+		return nil, errors.New("пост не найден")
 	}
 
 	if !post.CommentsAllowed {
-		return nil, err
+		return nil, errors.New("комментарии к этому посту запрещены")
 	}
 
 	comment := &model.Comment{
@@ -77,12 +60,34 @@ func (r *mutationResolver) AddComment(ctx context.Context, postID string, parent
 	return comment, nil
 }
 
-// ✅ Получение комментариев к посту с поддержкой пагинации
-func (r *queryResolver) Comments(ctx context.Context, postID string, limit, offset int) ([]*model.Comment, error) {
+// Получение всех постов
+func (r *queryResolver) Posts(ctx context.Context) ([]*model.Post, error) {
+	return db.DB.GetAllPosts()
+}
+
+// Получение поста по ID
+func (r *queryResolver) Post(ctx context.Context, id string) (*model.Post, error) {
+	post, err := db.DB.GetPostByID(id)
+	if err != nil || post == nil {
+		return nil, errors.New("пост не найден")
+	}
+
+	// Загрузка комментариев к посту
+	comments, err := db.DB.GetCommentsByPostID(id, 10, 0)
+	if err != nil {
+		return nil, err
+	}
+	post.Comments = comments // ✅ Добавляем комментарии к объекту поста
+
+	return post, nil
+}
+
+// Получение комментариев к посту с поддержкой пагинации
+func (r *queryResolver) Comments(ctx context.Context, postID string, limit int, offset int) ([]*model.Comment, error) {
 	return db.DB.GetCommentsByPostID(postID, limit, offset)
 }
 
-// ✅ Поддержка подписки на новые комментарии (GraphQL Subscriptions)
+// Поддержка подписки на новые комментарии (GraphQL Subscriptions)
 func (r *subscriptionResolver) CommentAdded(ctx context.Context, postID string) (<-chan *model.Comment, error) {
 	commentChan := make(chan *model.Comment, 1)
 
@@ -103,7 +108,25 @@ func (r *subscriptionResolver) CommentAdded(ctx context.Context, postID string) 
 	return commentChan, nil
 }
 
-// ✅ Подключение к `generated.go`
-func (r *Resolver) Mutation() MutationResolver         { return &mutationResolver{r} }
-func (r *Resolver) Query() QueryResolver               { return &queryResolver{r} }
+// Mutation returns MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+
+// Query returns QueryResolver implementation.
+func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+
+// Subscription returns SubscriptionResolver implementation.
 func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
+
+type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+/*
+	type Resolver struct{}
+*/
