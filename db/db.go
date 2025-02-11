@@ -91,7 +91,7 @@ func (m *MemoryStorage) GetCommentsByPostID(postID string, limit, offset int) ([
 	return comments[offset : offset+limit], nil
 }
 
-// --- PostgreSQL Хранилище ---
+// PostgreSQL Хранилище
 type PostgresStorage struct {
 	DB *sql.DB
 }

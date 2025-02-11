@@ -33,13 +33,13 @@ func TestCreatePost(t *testing.T) {
 	resolver := &graph.Resolver{} // Используем указатель, чтобы передавать структуру по ссылке
 	ctx := context.Background()
 
-	newPost, err := resolver.Mutation().CreatePost(ctx, "Test Title", "Test Content", "Test Author", true)
+	newPost, err := resolver.Mutation().CreatePost(ctx, "Тестовое название", "Контент", "автор", true)
 
 	assert.NoError(t, err, "Ошибка при создании поста")
 	assert.NotNil(t, newPost, "Созданный пост не должен быть nil")
-	assert.Equal(t, "Test Title", newPost.Title)
-	assert.Equal(t, "Test Content", newPost.Content)
-	assert.Equal(t, "Test Author", newPost.Author)
+	assert.Equal(t, "Тестовое название", newPost.Title)
+	assert.Equal(t, "Контент", newPost.Content)
+	assert.Equal(t, "автор", newPost.Author)
 	assert.Equal(t, true, newPost.CommentsAllowed)
 }
 
@@ -51,18 +51,18 @@ func TestAddComment(t *testing.T) {
 	ctx := context.Background()
 
 	// Создаем тестовый пост перед добавлением комментария
-	newPost, err := resolver.Mutation().CreatePost(ctx, "Test Title", "Test Content", "Test Author", true)
+	newPost, err := resolver.Mutation().CreatePost(ctx, "Тестовое название", "Контент", "Автор", true)
 	assert.NoError(t, err, "Ошибка при создании поста")
 	assert.NotNil(t, newPost, "Созданный пост не должен быть nil")
 
 	// Теперь создаем комментарий к только что созданному посту
-	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Comment Author", "Test Comment")
+	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Автор коммента", "Тестовый коммент")
 
 	assert.NoError(t, err, "Ошибка при добавлении комментария")
 	assert.NotNil(t, newComment, "Созданный комментарий не должен быть nil")
 	assert.Equal(t, newPost.ID, newComment.PostID, "Комментарий должен быть привязан к правильному посту")
-	assert.Equal(t, "Comment Author", newComment.Author)
-	assert.Equal(t, "Test Comment", newComment.Content)
+	assert.Equal(t, "Автор коммента", newComment.Author)
+	assert.Equal(t, "Тестовый коммент", newComment.Content)
 }
 
 // Тест получения поста с комментариями
@@ -73,12 +73,12 @@ func TestGetPostWithComments(t *testing.T) {
 	ctx := context.Background()
 
 	// Создаем тестовый пост
-	newPost, err := resolver.Mutation().CreatePost(ctx, "Test Title", "Test Content", "Test Author", true)
+	newPost, err := resolver.Mutation().CreatePost(ctx, "Tестовое название", "Контент", "Автор", true)
 	assert.NoError(t, err, "Ошибка при создании поста")
 	assert.NotNil(t, newPost, "Созданный пост не должен быть nil")
 
 	// Добавляем коммент к этому посту
-	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Comment Author", "Test Comment")
+	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Автор коммента", "Тест коммента")
 	assert.NoError(t, err, "Ошибка при добавлении комментария")
 	assert.NotNil(t, newComment, "Созданный комментарий не должен быть nil")
 
@@ -95,7 +95,7 @@ func TestCreatePostWithoutComments(t *testing.T) {
 	resolver := &graph.Resolver{}
 	ctx := context.Background()
 
-	newPost, err := resolver.Mutation().CreatePost(ctx, "No Comments Post", "No Comments Content", "Test Author", false)
+	newPost, err := resolver.Mutation().CreatePost(ctx, "Тест без комментов", "Контент", "Автор", false)
 	assert.NoError(t, err, "Ошибка при создании поста")
 	assert.NotNil(t, newPost, "Созданный пост не должен быть nil")
 	assert.Equal(t, false, newPost.CommentsAllowed)
@@ -109,12 +109,12 @@ func TestAddCommentToPostWithDisabledComments(t *testing.T) {
 	ctx := context.Background()
 
 	// Создаем пост, в котором запрещены комментарии
-	newPost, err := resolver.Mutation().CreatePost(ctx, "No Comments Post", "Content", "Test Author", false)
+	newPost, err := resolver.Mutation().CreatePost(ctx, "Тест без комментов", "Контент", "Автор", false)
 	assert.NoError(t, err, "Ошибка при создании поста")
 	assert.NotNil(t, newPost, "Созданный пост не должен быть nil")
 
 	// Пытаемся добавить коммента (должна быть ошибка)
-	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Comment Author", "Test Comment")
+	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Автор", "Коммент")
 	assert.Error(t, err, "Ожидалась ошибка при попытке добавить комментарий к посту с отключенными комментариями")
 	assert.Nil(t, newComment, "Комментарий не должен быть создан")
 	assert.Equal(t, "комментарии к этому посту запрещены", err.Error(), "Текст ошибки должен совпадать")
@@ -127,12 +127,12 @@ func TestFullProcess(t *testing.T) {
 	ctx := context.Background()
 
 	// Создаем пост
-	newPost, err := resolver.Mutation().CreatePost(ctx, "Integration Test Post", "Test Content", "Test Author", true)
+	newPost, err := resolver.Mutation().CreatePost(ctx, "Тестовый пост", "Контент", "Автор", true)
 	assert.NoError(t, err, "Ошибка при создании поста")
 	assert.NotNil(t, newPost, "Созданный пост не должен быть nil")
 
 	// Добавляем комментарий к посту
-	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Test Commenter", "This is a test comment.")
+	newComment, err := resolver.Mutation().AddComment(ctx, newPost.ID, nil, "Тестовый коммент", "Коммент для поста")
 	assert.NoError(t, err, "Ошибка при добавлении комментария")
 	assert.NotNil(t, newComment, "Созданный комментарий не должен быть nil")
 
@@ -152,7 +152,7 @@ func TestFullProcess(t *testing.T) {
 	if assert.NotNil(t, retrievedPost.Comments, "Список комментариев не должен быть nil") {
 		assert.Equal(t, 1, len(retrievedPost.Comments), "Должен быть 1 комментарий")
 		assert.Equal(t, newComment.ID, retrievedPost.Comments[0].ID, "ID комментария должен совпадать")
-		assert.Equal(t, "This is a test comment.", retrievedPost.Comments[0].Content, "Текст комментария должен совпадать")
+		assert.Equal(t, "Коммент для поста", retrievedPost.Comments[0].Content, "Текст комментария должен совпадать")
 	}
 }
 func TestPaginationComments(t *testing.T) {
@@ -210,22 +210,22 @@ func TestNestedComments(t *testing.T) {
 	ctx := context.Background()
 
 	// Создаем пост
-	post, err := resolver.Mutation().CreatePost(ctx, "Test Post", "Content", "Author", true)
+	post, err := resolver.Mutation().CreatePost(ctx, "Teстовый пост", "Контент", "Aвтор", true)
 	assert.NoError(t, err)
 	assert.NotNil(t, post)
 
 	// Добавляем корневой комментарий
-	rootComment, err := resolver.Mutation().AddComment(ctx, post.ID, nil, "User1", "Root Comment")
+	rootComment, err := resolver.Mutation().AddComment(ctx, post.ID, nil, "User1", "Корневой комментарий")
 	assert.NoError(t, err)
 	assert.NotNil(t, rootComment)
 
 	// Добавляем вложенный комментарий
-	childComment1, err := resolver.Mutation().AddComment(ctx, post.ID, &rootComment.ID, "User2", "Child Comment 1")
+	childComment1, err := resolver.Mutation().AddComment(ctx, post.ID, &rootComment.ID, "User2", "Вложенный комментарий 1")
 	assert.NoError(t, err)
 	assert.NotNil(t, childComment1)
 
 	// Добавляем еще один уровень вложенности
-	childComment2, err := resolver.Mutation().AddComment(ctx, post.ID, &childComment1.ID, "User3", "Child Comment 2")
+	childComment2, err := resolver.Mutation().AddComment(ctx, post.ID, &childComment1.ID, "User3", "Вложенный комментариий 2")
 	assert.NoError(t, err)
 	assert.NotNil(t, childComment2)
 
@@ -241,7 +241,7 @@ func TestCommentSubscription(t *testing.T) {
 	ctx := context.Background()
 
 	// Создаем пост
-	post, err := resolver.Mutation().CreatePost(ctx, "Subscription Test", "Content", "Author", true)
+	post, err := resolver.Mutation().CreatePost(ctx, "Тест подписки", "Контент", "Автор", true)
 	assert.NoError(t, err)
 	assert.NotNil(t, post)
 
@@ -252,14 +252,14 @@ func TestCommentSubscription(t *testing.T) {
 	// Добавляем комментарий
 	go func() {
 		time.Sleep(1 * time.Second) // Ждем 1 секунду, имитируем задержку
-		_, _ = resolver.Mutation().AddComment(ctx, post.ID, nil, "User", "New comment via subscription test")
+		_, _ = resolver.Mutation().AddComment(ctx, post.ID, nil, "User", "Новый коммент для теста")
 	}()
 
 	// Ждем комментарий из подписки
 	select {
 	case newComment := <-commentChan:
 		assert.NotNil(t, newComment, "Комментарий из подписки не должен быть nil")
-		assert.Equal(t, "New comment via subscription test", newComment.Content, "Содержимое комментария должно совпадать")
+		assert.Equal(t, "Новый коммент для теста", newComment.Content, "Содержимое комментария должно совпадать")
 	case <-time.After(3 * time.Second):
 		t.Fatal("Не получили комментарий через подписку")
 	}

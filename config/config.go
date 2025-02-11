@@ -4,17 +4,15 @@ import (
 	"os"
 )
 
-// Config хранит параметры запуска
 type Config struct {
-	StorageType string // "memory" или "postgres"
-	PostgresDSN string // Строка подключения к PostgreSQL
+	StorageType string // мемори или постгрес
+	PostgresDSN string // Строка подключения к рostgreSQL
 }
 
-// LoadConfig загружает конфигурацию из переменных окружения
 func LoadConfig() *Config {
 	storageType := os.Getenv("STORAGE_TYPE")
 	if storageType == "" {
-		storageType = "memory" // Значение по умолчанию
+		storageType = "memory" // по умолчанию
 	}
 
 	postgresDSN := os.Getenv("POSTGRES_DSN")

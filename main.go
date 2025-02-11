@@ -13,25 +13,20 @@ import (
 )
 
 func main() {
-	// Создаём GraphQL сервер
-	//srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{
-	//	Resolvers: &graph.Resolver{},
-	//}))
-
 	// Загружаем конфиг
 	cfg := config.LoadConfig()
 
-	// Инициализируем хранилище (PostgreSQL или In-Memory)
+	// Инициализируем хранилище
 	db.InitStorage(cfg)
 
-	// Настраиваем GraphQL-сервер
+	// GraphQL-сервер
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
 
-	// Указываем маршруты
+	// маршруты
 	http.Handle("/", playground.Handler("GraphQL Playground", "/query"))
 	http.Handle("/query", srv)
 
-	// Определяем порт (по умолчанию 8080)
+	// порт (по умолчанию 8080)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
